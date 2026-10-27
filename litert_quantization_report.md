@@ -80,7 +80,7 @@ flowchart TD
 
 1. **`quantizer.py` (`Quantizer` クラス)**
    * ユーザー向けファサードクラス。入力モデルとレシピを保持し、`need_calibration` プロパティでキャリブレーション要否を判定します。
-   * 主要メソッドとして ` load_quantization_recipe()`、`update_quantization_recipe()`、`calibrate()`、`quantize()`、`validate()` を提供します。
+   * 主要メソッドとして `load_quantization_recipe()`、`update_quantization_recipe()`、`calibrate()`、`quantize()`、`validate()` を提供します。
 2. **`recipe.py` & `recipe_manager.py` (`RecipeManager` クラス)**
    * **`recipe.py`**: よく使われる量子化設定のラッパー関数群を提供します（例：`dynamic_wi8_afp32()`, `dynamic_wi4_afp32()`, `static_wi8_ai8()`, `static_wi8_ai16()`, `weight_only_wi8_afp32()` 等）。
    * **`recipe_manager.py`**: 正規表現（`regex`）と対象オペレーション種別（`TFLOperationName`）の組み合わせでスコープを定義し、演算ごとの量子化設定（`_OpQuantizationConfig`）をリストとして管理します。
@@ -117,7 +117,7 @@ flowchart TD
   * **KL Divergence** (カルバック・ライブラー情報量：確率分布の乖離度)
 * **出力 (`ComparisonResult`)**:
   検証結果は `ComparisonResult` オブジェクトとして返却されます。
-  * `comparison_results.get_all_tensor_results()` で全テンソルの誤差統計を辞書として取得し、Python スクリプト上で「コサイン類似度が 0.95 未満のテンソル」や「MSE が急증したノード」をソートして抽出できます。
+  * `comparison_results.get_all_tensor_results()` で全テンソルの誤差統計を辞書として取得し、Python スクリプト上で「コサイン類似度が 0.95 未満のテンソル」や「MSE が急増したノード」をソートして抽出できます。
 
 ### 4.2 AI Edge Model Explorer との連携によるビジュアルデバッグ
 数値ログだけでは「グラフのどの分岐（Residual 接続や Attention ヘッドなど）で誤差が増幅しているか」を直感的に把握するのが困難な場合があります。そこで **AI Edge Model Explorer (`ai-edge-model-explorer`)** との連携が用意されています。
@@ -173,11 +173,11 @@ for tensor_name, metrics in sorted(
     print(f"Tensor: {tensor_name} | MSE: {metrics.mse:.6f} | CosSim: {metrics.cosine_similarity:.4f}")
 ```
 
-### ステップ 2: 混在精度量子化（Mixed-Precision: `wi8_ai16` の 부분適用）
+### ステップ 2: 混在精度量子化（Mixed-Precision: `wi8_ai16` の部分適用）
 ハードウェアアクセラレータ（NPU 等）の制約で「浮動小数点（FP32）に戻すとデリゲートが分割されて速度が落ちる」場合、問題のあるレイヤの活性化（Activation）だけを **8-bit から 16-bit（INT16）に引き上げる（16x8 量子化）** のが非常に有効です。Softmax 前後、LayerNorm、Sigmoid/Tanh 周辺、または最初の入力層・最後の出力層（Logits）で特に効果を発揮します。
 
 ### ステップ 3: 選択的量子化（Selective Quantization: 特定レイヤの FP32 維持）
-特定のレイヤ（例：モデルの先頭層、最終分類ヘッド、あるいは外れ値が激しい特定の Attention / Conv ブロック）がどうしても INT8/INT16 に収まらない場合、`RecipeManager` を用いて該当レイヤの正規表現スコープに `AlgorithmName.NO_QUANTIZE`（または ` dynamic_wi8_afp32`）を上書き指定します。
+特定のレイヤ（例：モデルの先頭層、最終分類ヘッド、あるいは外れ値が激しい特定の Attention / Conv ブロック）がどうしても INT8/INT16 に収まらない場合、`RecipeManager` を用いて該当レイヤの正規表現スコープに `AlgorithmName.NO_QUANTIZE`（または `dynamic_wi8_afp32`）を上書き指定します。
 
 ```python
 from ai_edge_quantizer import quantizer, recipe_manager, qtyping, algorithm_manager
